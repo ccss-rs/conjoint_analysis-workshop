@@ -1,0 +1,376 @@
+---
+title: "Analyzing Qualtrics Conjoint Data in R"
+author: "Priscilla Torres"
+date: "9/26/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load packages needed 
+
+Tidyverse is a syntax in R and a suite of packages that runs off of the pipe operator. For more info see: https://www.tidyverse.org/packages/
+
+
+```{r load packages}
+
+rm(list=ls()) # clears environment
+
+library(foreign)
+library(tidyverse)
+
+library(estimatr)
+library(cregg)
+
+```
+
+Set the working directory to wherever you have your data stored and load the data as a CSV file. Note that many of the first few columns (variables) are metadata that we will not need for the analysis.
+
+```{r load data and subset}
+getwd() # how you can check what your working directory is set to
+setwd("/Users/priscilla/Dropbox/GSS Lab/GSS Workshop/Conjoint Tutorial") # how you can set your working directory
+
+conjoint <- read.csv("conjoint.csv") # load csv file/data that we downloaded from Qualtrics 
+
+names(conjoint) # let's see which variables Qualtrics included in the data output
+
+# Now, let's just isolate the variables that we will need in our analysis 
+conjoint2 <- subset(conjoint, select = c("C1",
+                                         "C2", 
+                                         "C3",
+                                         "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.1.1_CBCONJOINT", 
+                                         "f2550540.8b2d.4116.bd4f.9e7d67d39926.1.1_CBCONJOINT", 
+                                         "fe83fea4.1983.4e36.8201.40eb6016c125.1.1_CBCONJOINT", 
+                                         
+                                         "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.1.2_CBCONJOINT",
+                                         "f2550540.8b2d.4116.bd4f.9e7d67d39926.1.2_CBCONJOINT",
+                                         "fe83fea4.1983.4e36.8201.40eb6016c125.1.2_CBCONJOINT",
+                                         
+                                         "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.2.1_CBCONJOINT",
+                                         "f2550540.8b2d.4116.bd4f.9e7d67d39926.2.1_CBCONJOINT",
+                                         "fe83fea4.1983.4e36.8201.40eb6016c125.2.1_CBCONJOINT",
+                                         
+                                         "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.2.2_CBCONJOINT",
+                                         "f2550540.8b2d.4116.bd4f.9e7d67d39926.2.2_CBCONJOINT", 
+                                         "fe83fea4.1983.4e36.8201.40eb6016c125.2.2_CBCONJOINT",
+                                         
+                                         "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.3.1_CBCONJOINT",
+                                         "f2550540.8b2d.4116.bd4f.9e7d67d39926.3.1_CBCONJOINT",
+                                         "fe83fea4.1983.4e36.8201.40eb6016c125.3.1_CBCONJOINT",
+                                         
+                                         "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.3.2_CBCONJOINT",
+                                         "f2550540.8b2d.4116.bd4f.9e7d67d39926.3.2_CBCONJOINT",
+                                         "fe83fea4.1983.4e36.8201.40eb6016c125.3.2_CBCONJOINT")) 
+
+# The variable names are very clunky and convoluted. The code below allows us to change the variable names to what is written on the right hand side of the arrow. 
+names(conjoint2)[names(conjoint2) == "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.1.1_CBCONJOINT"] <-"name_1a"
+names(conjoint2)[names(conjoint2) == "f2550540.8b2d.4116.bd4f.9e7d67d39926.1.1_CBCONJOINT"] <-"yrs_1a"
+names(conjoint2)[names(conjoint2) == "fe83fea4.1983.4e36.8201.40eb6016c125.1.1_CBCONJOINT"] <-"exp_1a"
+
+names(conjoint2)[names(conjoint2) == "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.1.2_CBCONJOINT"] <-"name_1b"
+names(conjoint2)[names(conjoint2) == "f2550540.8b2d.4116.bd4f.9e7d67d39926.1.2_CBCONJOINT"] <-"yrs_1b"
+names(conjoint2)[names(conjoint2) == "fe83fea4.1983.4e36.8201.40eb6016c125.1.2_CBCONJOINT"] <-"exp_1b"
+
+names(conjoint2)[names(conjoint2) == "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.2.1_CBCONJOINT"] <-"name_2a"
+names(conjoint2)[names(conjoint2) == "f2550540.8b2d.4116.bd4f.9e7d67d39926.2.1_CBCONJOINT"] <-"yrs_2a"
+names(conjoint2)[names(conjoint2) == "fe83fea4.1983.4e36.8201.40eb6016c125.2.1_CBCONJOINT"] <-"exp_2a"
+
+names(conjoint2)[names(conjoint2) == "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.2.2_CBCONJOINT"] <-"name_2b"
+names(conjoint2)[names(conjoint2) == "f2550540.8b2d.4116.bd4f.9e7d67d39926.2.2_CBCONJOINT"] <-"yrs_2b"
+names(conjoint2)[names(conjoint2) == "fe83fea4.1983.4e36.8201.40eb6016c125.2.2_CBCONJOINT"] <-"exp_2b"
+
+names(conjoint2)[names(conjoint2) == "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.3.1_CBCONJOINT"] <-"name_3a"
+names(conjoint2)[names(conjoint2) == "f2550540.8b2d.4116.bd4f.9e7d67d39926.3.1_CBCONJOINT"] <-"yrs_3a"
+names(conjoint2)[names(conjoint2) == "fe83fea4.1983.4e36.8201.40eb6016c125.3.1_CBCONJOINT"] <-"exp_3a"
+
+names(conjoint2)[names(conjoint2) == "X6cfb4a95.fd09.4026.95d7.6dd27d85212a.3.2_CBCONJOINT"] <-"name_3b"
+names(conjoint2)[names(conjoint2) == "f2550540.8b2d.4116.bd4f.9e7d67d39926.3.2_CBCONJOINT"] <-"yrs_3b"
+names(conjoint2)[names(conjoint2) == "fe83fea4.1983.4e36.8201.40eb6016c125.3.2_CBCONJOINT"] <-"exp_3b"
+
+```
+
+If we look at the data, we can see that excess information is included in the first two rows that we will not need for the analysis. 
+
+```{r drop unnecessary rows}
+# this allows us to drop the first two rows because they are not relevant to our data 
+conjoint2 <- conjoint2[-c(1, 2), ]
+
+```
+
+Part of the challenge of analyzing conjoint data is that we need it to be in long-form. Recall that we assigned the conjoint task to the respondents three different times in our experiment (each survey respondent was asked three different times to choose between two different peacekeepers to send to the peacekeeping operation). Consequently, we will need each row in the dataset to represent: the respondent-task number-peacekeeper profile. 
+
+Each row currently represents the respondent only. Consequently, it would be helpful to create an indicator variable for each respondent. 
+
+```{r create indicator for respondent}
+
+# this allows us to create an indicator number for each respondent, which we will call "result.id" 
+conjoint2$result.id <- 1:nrow(conjoint2) 
+
+```
+
+Next, we will need to subset the data frame and create a variable that indicates which task (1, 2, or 3) the dataframe represents. 
+```{r subset a, b, c}
+
+#subsets the data to the first task
+a <- subset(conjoint2, select = c("C1", 
+                                  "name_1a", 
+                                  "yrs_1a", 
+                                  "exp_1a", 
+                                  "name_1b", 
+                                  "yrs_1b", 
+                                  "exp_1b", 
+                                  "result.id"))
+
+#subsets the data to the second task
+b <- subset(conjoint2, select = c("C2", 
+                                  "name_2a", 
+                                  "yrs_2a", 
+                                  "exp_2a", 
+                                  "name_2b", 
+                                  "yrs_2b", 
+                                  "exp_2b", 
+                                  "result.id"))
+
+# subsets the data to the third task
+c <- subset(conjoint2, select = c("C3", 
+                                  "name_3a", 
+                                  "yrs_3a", 
+                                  "exp_3a", 
+                                  "name_3b", 
+                                  "yrs_3b", 
+                                  "exp_3b", 
+                                  "result.id"))
+
+# create a variable indicating which task the dataframe represents 
+a$task <- 1
+
+b$task <- 2
+
+c$task <- 3
+
+```
+
+Now we will further subset each dataframe by peacekeeper choice. Additionally, we need to create a variable that indicates whether the individual peacekeeper profile (i.e. the combination of traits), was selected as the "winning" profile in the discrete choice set. 
+
+```{r subset a and winner}
+
+# this subsets to: respondent- task 1- peacekeeper1 
+
+a_1 <- subset(a, select = c("C1", 
+                                  "name_1a", 
+                                  "yrs_1a", 
+                                  "exp_1a", 
+                                  "result.id", 
+                                  "task"))
+
+# create the winner variable 
+a_1 <- a_1 %>% 
+  mutate(winner = case_when(
+  C1 == "1" ~ 1, 
+  C1 == "2" ~ 0
+)) # the code creates a new variable called "winner" and states that if C1 (task one variable) indicates that peacekeeper 1 (the profile this dataframe is subset to) was chosen (i.e. if C1 = 1, then the peacekeeper profile was the "winner", i.e. it is coded as a 1; if not, if 2 was chosen, then it will be coded as 0)
+
+
+
+```
+
+We will repeat this for task 1, peacekeeper 2 profile and repeat for each of the other 2 tasks and 2 peacekeepers. 
+```{r subset a and merge}
+
+# this subsets to: respondent- task 1- peacekeeper2
+a_2 <- subset(a, select = c("C1", 
+                                  "name_1b", 
+                                  "yrs_1b", 
+                                  "exp_1b", 
+                                  "result.id", 
+                                  "task"))
+
+a_2 <- a_2 %>% 
+  mutate(winner = case_when(
+  C1 == "2" ~ 1, 
+  C1 == "1" ~ 0
+))
+
+# we will change the names of the name, years and experience variables to match between a_1 and a_2 so that we can merge
+names(a_2)[names(a_2) == "name_1b"] <-"name_1a"
+names(a_2)[names(a_2) == "yrs_1b"] <-"yrs_1a"
+names(a_2)[names(a_2) == "exp_1b"] <-"exp_1a"
+
+# this merges the two a dataframes (the one that represents task 1, peacekeeper 1 and task 1, peacekeeper 2) back into one data frame that represents task 1 
+a <- full_join(a_1, a_2)
+
+# we then change the variable names for dataframe a to ones that will match the consequent variables in the other b and c dataframes- this will allow us to merge later on (our goal is to create variable names for each of the attributes that can be common across dataframes a, b and c)
+names(a)[names(a) == "name_1a"] <-"name"
+names(a)[names(a) == "yrs_1a"] <-"yrs"
+names(a)[names(a) == "exp_1a"] <-"exp"
+
+```
+
+
+```{r subset b}
+
+b_1 <- subset(b, select = c("C2", 
+                                  "name_2a", 
+                                  "yrs_2a", 
+                                  "exp_2a", 
+                                  "result.id", 
+                                  "task"))
+
+b_1 <- b_1 %>% 
+  mutate(winner = case_when(
+  C2 == "1" ~ 1, 
+  C2 == "2" ~ 0
+))
+
+b_2 <- subset(b, select = c("C2", 
+                                  "name_2b", 
+                                  "yrs_2b", 
+                                  "exp_2b", 
+                                  "result.id", 
+                                  "task"))
+
+b_2 <- b_2 %>% 
+  mutate(winner = case_when(
+  C2 == "2" ~ 1, 
+  C2 == "1" ~ 0
+))
+
+names(b_2)[names(b_2) == "name_2b"] <-"name_2a"
+names(b_2)[names(b_2) == "yrs_2b"] <-"yrs_2a"
+names(b_2)[names(b_2) == "exp_2b"] <-"exp_2a"
+  
+b <- full_join(b_1, b_2)
+
+names(b)[names(b) == "name_2a"] <-"name"
+names(b)[names(b) == "yrs_2a"] <-"yrs"
+names(b)[names(b) == "exp_2a"] <-"exp"
+
+```
+
+
+```{r subset c}
+
+c_1 <- subset(c, select = c("C3", 
+                                  "name_3a", 
+                                  "yrs_3a", 
+                                  "exp_3a", 
+                                  "result.id", 
+                                  "task"))
+
+c_1 <- c_1 %>% 
+  mutate(winner = case_when(
+  C3 == "1" ~ 1, 
+  C3 == "2" ~ 0
+))
+
+c_2 <- subset(c, select = c("C3", 
+                                  "name_3b", 
+                                  "yrs_3b", 
+                                  "exp_3b", 
+                                  "result.id", 
+                                  "task"))
+
+c_2 <- c_2 %>% 
+  mutate(winner = case_when(
+  C3 == "2" ~ 1, 
+  C3 == "1" ~ 0
+))
+
+names(c_2)[names(c_2) == "name_3b"] <-"name_3a"
+names(c_2)[names(c_2) == "yrs_3b"] <-"yrs_3a"
+names(c_2)[names(c_2) == "exp_3b"] <-"exp_3a"
+  
+c <- full_join(c_1, c_2)
+
+names(c)[names(c) == "name_3a"] <-"name"
+names(c)[names(c) == "yrs_3a"] <-"yrs"
+names(c)[names(c) == "exp_3a"] <-"exp"
+
+```
+Now that we have dataframes a, b and c (representing tasks 1, 2 and 3), we need to merge the three dataframes. 
+
+To do this, we will use a full join to first merge a and b. Then, we will merge the new data frame with c. 
+
+Our new dataframe, called "conjoint3" is now in long form. For our purposes, this means that each row represents the peacekeeper number (1 or 2) by task for each respondent (i.e. peacekeeper 1, task 1, for respondent 3). 
+
+```{r final merge}
+
+merge1 <- full_join(a, b)
+
+conjoint3 <- full_join(merge1, c)
+
+conjoint3 <- subset(conjoint3, select = c("name", 
+                                  "yrs", 
+                                  "exp", 
+                                  "result.id", 
+                                  "task", 
+                                  "winner"))
+
+```
+
+Now that we have our data in the correct format, we can analyze it! 
+
+There are several different ways to analyze conjoint data. In political science, the Average Marginal Components Effect (AMCE) and the Marginal Means (MM) are the two most common ways to analyze conjoint data. For a more complete discussion of the two different methods, see Hainmueller, Hopkins and Yamamoto (2014) and Leeper, Hobolt and Tilley (2020). 
+
+To analyze the AMCE, see the code below: 
+
+Note that AMCE requires the establishment of a baseline (a point of comparison against the other elements of the same attribute). This is what is referred to as "baselines" down below. 
+
+```{r AMCE}
+
+library(cregg) # package that we will need for the analysis
+
+#baselines for AMCE 
+baselines <- list()
+baselines$name <- "John"
+baselines$yrs <- "3 years"
+baselines$exp <- "Computer"
+
+#establish factor order so conjoint levels in correct order: NOTE that the conjoint attributes MUST be in factor form. 
+conjoint3$name <- factor(conjoint3$name, levels=c("John", "Sarah"))
+conjoint3$yrs <- factor(conjoint3$yrs, levels= c("3 years", "10 years"))
+conjoint3$exp <- factor(conjoint3$exp, levels= c("Computer", "Civil-military relations", "Combat"))
+
+f1 <- winner ~ name + yrs + exp # base model 
+
+# amce model with respondent fixed effects
+amces <- cj(conjoint3, f1, id = ~result.id, estimate="amce")
+
+```
+
+Now we can plot the results: 
+
+```{r plot AMCE results}
+
+plot(amces, vline = 0) + ggtitle("AMCE: Peacekeeper Selection by Attribute") + labs(color = "Attributes", x = "AMCEs", y  = "Attributes and Levels") + theme_gray()   +  theme(legend.position = "bottom", legend.title = element_blank()) 
+head(amces[c("feature", "level", "estimate", "std.error")], 8L)
+```
+
+To analyze the MM, use the code below: 
+
+```{r MM}
+library(cregg)
+
+#### Marginal Means: General #### 
+f1 <- winner ~ name + yrs + exp # base model 
+
+#### Marginal means estimates for each conjoint attribute #### 
+margmeans <- cj(conjoint3, f1, id = ~result.id, estimate = "mm")
+
+
+```
+
+Now we can plot the results: 
+
+Note that MM does not require the establishment of a baseline, but rather allows you to compare the effect within attributes (i.e. we can see which attribute drives the effect "more", i.e. 3 years versus 10 years of experience). 
+
+```{r plot MM}
+
+
+plot(margmeans, vline = 0.5) + ggtitle("Marginal Means: Peacekeeper Selection by Attribute") + labs(color = "Attributes", x = "Marginal Means", y  = "Attributes and Categories") + theme_gray()  +  theme(legend.position = "none") 
+head(margmeans[c("feature", "level", "estimate", "std.error")], 8L) # plotting marginal means
+
+```
+
